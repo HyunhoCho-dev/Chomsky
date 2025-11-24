@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chomsky - AI Assistant by CTTechnologies</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Raleway', sans-serif;
+            background: linear-gradient(135deg, #f5f1e8 0%, #e8dcc8 100%);
+            min-height: 100vh;
+            color: #3a3a3a;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0;
+            border-bottom: 2px solid rgba(139, 115, 85, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3.5rem;
+            font-weight: 600;
+            color: #8b7355;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .tagline {
+            font-size: 0.95rem;
+            color: #a0826d;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        .company {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #b8997a;
+            font-weight: 400;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(139, 115, 85, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: calc(100vh - 280px);
+        }
+
+        .messages-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .messages-area::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .messages-area::-webkit-scrollbar-track {
+            background: rgba(184, 153, 122, 0.1);
+            border-radius: 10px;
+        }
+
+        .messages-area::-webkit-scrollbar-thumb {
+            background: rgba(139, 115, 85, 0.3);
+            border-radius: 10px;
+        }
+
+        .message {
+            display: flex;
+            gap: 15px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .message.user .avatar {
+            background: linear-gradient(135deg, #c4a77d 0%, #8b7355 100%);
+            color: white;
+        }
+
+        .message.assistant .avatar {
+            background: linear-gradient(135deg, #8b7355 0%, #6d5d4b 100%);
+            color: white;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 18px 24px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #8b7355 0%, #6d5d4b 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            color: #3a3a3a;
+            box-shadow: 0 4px 15px rgba(139, 115, 85, 0.1);
+            border-bottom-left-radius: 4px;
+        }
+
+        .input-area {
+            padding: 25px 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border-top: 1px solid rgba(139, 115, 85, 0.1);
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 16px 24px;
+            border: 2px solid rgba(139, 115, 85, 0.2);
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-family: 'Raleway', sans-serif;
+            background: white;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: #8b7355;
+            box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.1);
+        }
+
+        .send-button {
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #8b7355 0%, #6d5d4b 100%);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+            font-family: 'Raleway', sans-serif;
+        }
+
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 115, 85, 0.3);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8b7355;
+        }
+
+        .welcome-message h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+
+        .welcome-message p {
+            font-size: 1rem;
+            color: #a0826d;
+            line-height: 1.8;
+        }
+
+        .loading {
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+        }
+
+        .loading-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #8b7355;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .loading-dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .loading-dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+            0%, 80%, 100% {
+                transform: scale(0);
+            }
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        .error-message {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 16px 24px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 20px;
+            border: 1px solid #feb2b2;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #a0826d;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+
+            .input-wrapper {
+                flex-direction: column;
+            }
+
+            .send-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // 백엔드 API URL 설정 (같은 서버에서 서빙되므로 상대 경로 사용)
+        const API_URL = '';
+
+        function App() {
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState(null);
+            const messagesEndRef = useRef(null);
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages]);
+
+            const sendMessage = async (e) => {
+                e.preventDefault();
+                if (!input.trim() || isLoading) return;
+
+                const userMessage = { role: 'user', content: input };
+                setMessages(prev => [...prev, userMessage]);
+                setInput('');
+                setIsLoading(true);
+                setError(null);
+
+                try {
+                    const response = await fetch(`${API_URL}/api/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            messages: [...messages, userMessage]
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('서버 응답 오류가 발생했습니다.');
+                    }
+
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        setMessages(prev => [...prev, {
+                            role: 'assistant',
+                            content: data.message
+                        }]);
+                    } else {
+                        throw new Error(data.error || '알 수 없는 오류가 발생했습니다.');
+                    }
+                } catch (err) {
+                    setError(err.message);
+                    console.error('Error:', err);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <div className="container">
+                    <header>
+                        <div className="logo">Chomsky</div>
+                        <div className="tagline">Intelligent Conversation</div>
+                        <div className="company">by CTTechnologies</div>
+                    </header>
+
+                    <div className="chat-container">
+                        <div className="messages-area">
+                            {messages.length === 0 ? (
+                                <div className="welcome-message">
+                                    <h2>안녕하세요</h2>
+                                    <p>Chomsky AI 어시스턴트입니다.<br/>
+                                    무엇을 도와드릴까요?</p>
+                                </div>
+                            ) : (
+                                messages.map((msg, idx) => (
+                                    <div key={idx} className={`message ${msg.role}`}>
+                                        <div className="avatar">
+                                            {msg.role === 'user' ? 'U' : 'C'}
+                                        </div>
+                                        <div className="message-content">
+                                            {msg.content}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                            {isLoading && (
+                                <div className="message assistant">
+                                    <div className="avatar">C</div>
+                                    <div className="message-content">
+                                        <div className="loading">
+                                            <div className="loading-dot"></div>
+                                            <div className="loading-dot"></div>
+                                            <div className="loading-dot"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {error && (
+                                <div className="error-message">
+                                    {error}
+                                </div>
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        <div className="input-area">
+                            <form onSubmit={sendMessage}>
+                                <div className="input-wrapper">
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        placeholder="메시지를 입력하세요..."
+                                        disabled={isLoading}
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="send-button"
+                                        disabled={isLoading || !input.trim()}
+                                    >
+                                        전송
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <footer>
+                        © 2024 CTTechnologies. All rights reserved.
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
