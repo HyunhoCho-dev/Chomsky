@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
 import requests
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -26,36 +27,52 @@ def chat():
     try:
         data = request.json
         messages = data.get('messages', [])
-        
+
         if not messages:
             return jsonify({'error': 'Messages are required'}), 400
-        
-        # GLM API 호출
-        headers = {
-            'Authorization': f'Bearer {GLM_API_KEY}',
-            'Content-Type': 'application/json'
-        }
-        
-        payload = {
-            'model': 'glm-4.5-flash',
-            'messages': messages,
-            'stream': False,
-            'max_tokens': 2000,
-            'temperature': 0.7
-        }
-        
-        response = requests.post(GLM_API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        
-        result = response.json()
-        
-        return jsonify({
-            'success': True,
-            'message': result['choices'][0]['message']['content']
-        })
-        
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'API request failed: {str(e)}'}), 500
+
+        def generate():
+            try:
+                headers = {
+                    'Authorization': f'Bearer {GLM_API_KEY}',
+                    'Content-Type': 'application/json'
+                }
+
+                payload = {
+                    'model': 'glm-4.5-flash',
+                    'messages': messages,
+                    'stream': True,
+                    'max_tokens': 4000,
+                    'temperature': 0.8
+                }
+
+                response = requests.post(GLM_API_URL, headers=headers, json=payload, stream=True, timeout=60)
+                response.raise_for_status()
+
+                for line in response.iter_lines():
+                    if line:
+                        line_str = line.decode('utf-8')
+                        if line_str.startswith('data: '):
+                            data_str = line_str[6:]
+                            if data_str.strip() == '[DONE]':
+                                break
+                            try:
+                                chunk_data = json.loads(data_str)
+                                if 'choices' in chunk_data and len(chunk_data['choices']) > 0:
+                                    delta = chunk_data['choices'][0].get('delta', {})
+                                    content = delta.get('content', '')
+                                    if content:
+                                        yield f"data: {json.dumps({'content': content})}\n\n"
+                            except json.JSONDecodeError:
+                                continue
+
+                yield f"data: {json.dumps({'done': True})}\n\n"
+
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
